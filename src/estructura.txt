@@ -1,0 +1,44 @@
+Listado de rutas de carpetas para el volumen DatO.s
+El n£mero de serie del volumen es DC90-2F3E
+E:.
+³   estructura.txt
+³   
+ÃÄÄÄapp
+³   ³   favicon.ico
+³   ³   globals.css
+³   ³   layout.tsx
+³   ³   page.tsx
+³   ³   
+³   ÃÄÄÄapi
+³   ³   ÃÄÄÄauth
+³   ³   ³   ÀÄÄÄ[...nextauth]
+³   ³   ³           route.ts
+³   ³   ³           
+³   ³   ÀÄÄÄcertificados
+³   ³       ÀÄÄÄverificar
+³   ³               route.ts
+³   ³               
+³   ÀÄÄÄfonts
+³           GeistMonoVF.woff
+³           GeistVF.woff
+³           
+ÃÄÄÄcomponents
+³   ÃÄÄÄauth
+³   ³       AuthHeaderActions.tsx
+³   ³       
+³   ÃÄÄÄcertificados
+³   ³       VerificadorCertificado.tsx
+³   ³       
+³   ÃÄÄÄhome
+³   ³       CatalogoInteractivoLanding.tsx
+³   ³       
+³   ÀÄÄÄproviders
+³           NextAuthProvider.tsx
+³           
+ÃÄÄÄlib
+³       auth.ts
+³       prisma.ts
+³       
+ÀÄÄÄtypes
+        next-auth.d.ts
+        

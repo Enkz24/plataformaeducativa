@@ -1,0 +1,1684 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================================================
+// 1. ENUMS DEL SISTEMA (ROLES, PERMISOS, CURSOS, TEMPORADAS, PAGOS, OECE)
+// ============================================================================
+
+enum RolUsuario {
+  ADMINISTRADOR
+  ASISTENTE_ADMINISTRATIVO
+  CONTADURIA
+  SECRETARIA
+  PROFESOR
+  ESTUDIANTE
+}
+
+enum PermisoSistema {
+  // Permisos Financieros y de Pagos (1.8.7)
+  CONSULTAR_PAGOS
+  VALIDAR_PAGOS_MANUALES
+  APROBAR_PAGOS
+  RECHAZAR_PAGOS
+  REEMBOLSAR_PAGOS
+  GESTIONAR_CUOTAS
+  CONFIGURAR_MODALIDADES_PAGO
+  CONFIGURAR_PASARELAS_API
+  EXPORTAR_REPORTES_FINANCIEROS
+  EMITIR_COMPROBANTES_CONTABLES
+
+  // Permisos Académicos, Temporadas, Secciones, OECE y Administrativos
+  GESTIONAR_CONFIGURACION_GENERAL
+  GESTIONAR_CURSOS_PROGRAMAS
+  GESTIONAR_TEMPORADAS_Y_SECCIONES
+  INVITAR_CORREOS_SECCION
+  GESTIONAR_ASISTENCIAS_Y_NOTAS
+  GESTIONAR_BANCO_PREGUNTAS_OECE
+  GESTIONAR_SIMULACROS_OECE
+  GESTIONAR_PLANES_SUSCRIPCION
+  GESTIONAR_COMBOS_PACKS
+  GESTIONAR_CUPONES
+  EMITIR_CERTIFICADOS
+  EMITIR_CERTIFICADOS_FECHAS_PASADAS
+  EJECUTAR_MIGRACION_EXCEL
+  GESTIONAR_USUARIOS_ROLES
+  CAMBIAR_CORREO_USUARIOS
+  GESTIONAR_CMS_SECCIONES
+  ATENDER_CONSULTAS_Y_RECLAMACIONES
+  AUDITAR_SEGURIDAD_Y_RESPALDOS
+}
+
+enum TipoPrograma {
+  CURSO
+  TALLER
+  CAPACITACION
+  DIPLOMADO
+  DIPLOMA
+  ESPECIALIZACION
+  SIMULACRO_OECE
+}
+
+enum ModalidadCurso {
+  ASINCRONO
+  SINCRONO
+  HIBRIDO
+}
+
+enum NivelAcademico {
+  BASICO
+  INTERMEDIO
+  AVANZADO
+  ESPECIALIZADO
+}
+
+enum EstadoPublicacion {
+  BORRADOR
+  PUBLICADO
+  ARCHIVADO
+}
+
+enum TipoHoraAcademica {
+  PEDAGOGICAS
+  CRONOLOGICAS_NORMALES
+}
+
+enum AlcanceMembresiaCurso {
+  NINGUNA
+  TODAS
+  ESPECIFICAS
+}
+
+enum OrigenAlmacenamientoMaterial {
+  SERVIDOR_PUBLIC
+  SUPABASE_STORAGE
+  GOOGLE_DRIVE_LINK
+  GOOGLE_DRIVE_FILE_ID
+}
+
+enum ModoTareasSeccion {
+  SIN_TAREAS
+  TAREA_POR_SESION
+  TAREA_GENERAL_UNICA
+}
+
+enum TipoAcreditacionSeccion {
+  POR_DEFECTO_CURSO
+  CERTIFICADO_PARTICIPACION
+  CERTIFICADO_CAPACITACION
+  CERTIFICADO_APROBACION
+  DIPLOMA_ESPECIALIZACION
+  DIPLOMADO
+}
+
+enum EstadoAsistencia {
+  ASISTIO
+  FALTO
+  TARDANZA
+  JUSTIFICADO
+}
+
+enum NivelSimulacroOECE {
+  BASICO
+  PLUS
+  PREMIUM
+}
+
+enum PeriodoSuscripcion {
+  MENSUAL
+  TRIMESTRAL
+  SEMESTRAL
+  ANUAL
+  BIANUAL
+  PERSONALIZADO
+}
+
+enum EstadoVigenciaServicio {
+  PENDIENTE_ACTIVACION
+  ACTIVO
+  SUSPENDIDO_MOROSIDAD
+  VENCIDO
+  CANCELADO
+  RENOVADO
+}
+
+enum ModalidadPagoConfigurada {
+  SOLO_AUTOMATICO
+  SOLO_MANUAL
+  AMBOS
+}
+
+enum ModalidadProcesamientoPago {
+  AUTOMATICO_PASARELA
+  MANUAL_VALIDACION
+}
+
+enum ProveedorPago {
+  VISA_MASTERCARD_PASARELA
+  YAPE_PASARELA
+  PLIN_PASARELA
+  PAYPAL
+  CULQI
+  NIUBIZ
+  IZIPAY
+  MERCADOPAGO
+  STRIPE
+  TRANSFERENCIA_BANCARIA_MANUAL
+  YAPE_MANUAL
+  PLIN_MANUAL
+  DEPOSITO_AGENTE_MANUAL
+  ORDEN_DE_SERVICIO_ENTIDAD
+}
+
+enum EstadoOperacionPago {
+  PENDIENTE_PAGO
+  PENDIENTE_VALIDACION
+  APROBADO
+  RECHAZADO
+  PAGADO
+  VENCIDO
+  CANCELADO
+  REEMBOLSADO
+}
+
+enum ConceptoPago {
+  COMPRA_CURSO_PROGRAMA
+  COMPRA_SECCION_TEMPORADA
+  COMPRA_COMBO_PACK
+  PLAN_SIMULACRO_OECE
+  SUSCRIPCION_RECURRENTE
+  PAGO_CUOTA_CRONOGRAMA
+  EMISION_CERTIFICADO_FISICO_DIGITAL
+}
+
+enum TipoDescuentoCupon {
+  PORCENTAJE
+  MONTO_FIJO
+}
+
+enum TipoPreguntaExamen {
+  OPCION_UNICA
+  OPCION_MULTIPLE
+  VERDADERO_FALSO
+  CASO_PRACTICO_OECE
+}
+
+enum TipoNotificacionCorreo {
+  BIENVENIDA_ACTIVACION_CUENTA
+  INVITACION_SECCION_TEMPORADA
+  INVITACION_DOCENTE_SECCION
+  RECUPERACION_CONTRASENA
+  CAMBIO_CORREO_RESTAURADO
+  MODIFICACION_CONDICIONES_MEMBRESIA
+  PAGO_PENDIENTE_INSTRUCCIONES
+  PAGO_MANUAL_EN_REVISION
+  PAGO_CONFIRMADO_ACCESO_ACTIVO
+  PAGO_RECHAZADO_OBSERVACION
+  RECORDATORIO_VENCIMIENTO_CUOTA
+  AVISO_VENCIMIENTO_SUSCRIPCION
+  CONFIRMACION_RENOVACION
+  CERTIFICADO_EMITIDO
+}
+
+// ============================================================================
+// 2. CONFIGURACIÓN GENERAL DE LA EMPRESA Y SLIDERS DE PORTADA (/public)
+// ============================================================================
+
+model ConfiguracionSitio {
+  id                             String   @id @default(cuid())
+  clave                          String   @unique @default("PRINCIPAL")
+  nombreEmpresa                  String   @default("AULA PROFESIONAL")
+  subtituloEmpresa               String   @default("Escuela de Gestión y Especialización")
+  rucEmpresa                     String?
+  razonSocial                    String?
+  slogan                         String?  @default("Impulsa tu carrera profesional")
+  logoUrl                        String?  @default("/empresa/logo.png")
+  faviconUrl                     String?  @default("/favicon.ico")
+  colorPrimario                  String   @default("#09090b")
+  colorSecundario                String   @default("#18181b")
+  colorAcento                    String   @default("#f59e0b")
+
+  // Canales de WhatsApp (incluye el link directo para cambio/restauración de correo sin gastar en SMS)
+  telefonoWhatsappAsesoria       String   @default("51983495578")
+  telefonoWhatsappAlumnos        String   @default("51990945941")
+  telefonoWhatsappCambioCorreo   String   @default("51949329563")
+  mensajeBaseCambioCorreo        String   @default("Hola, ya no tengo acceso a mi correo registrado y solicito restaurar mi cuenta a un nuevo correo.")
+
+  correoContacto                 String?
+  direccionFisica                String?
+
+  // Firmas y sellos por defecto para Certificados y Diplomas
+  codigoCertificacionIsoDefault  String   @default("ISO 9001:2015 CO24.00145/U")
+  firmaDirectorUrl               String?  @default("/firmas/firma-director.png")
+  nombreDirector                 String?  @default("Dirección General")
+  cargoDirector                  String?  @default("Director General")
+  firmaCoordAcademicoUrl         String?  @default("/firmas/firma-academico.png")
+  nombreCoordAcademico           String?  @default("Coordinación Académica")
+  cargoCoordAcademico            String?  @default("Director Académico")
+
+  mostrarCintilloSuperior        Boolean  @default(true)
+  textoCintilloSuperior          String?  @default("Membresías y Simulador de Examen OECE (Ley N.° 32069): accede a todos los cursos y certifícate con QR")
+  updatedAt                      DateTime @updatedAt
+}
+
+model SliderPortada {
+  id                    String   @id @default(cuid())
+  titulo                String
+  subtitulo             String?  @db.Text
+  etiquetaSuperior      String?  @default("FORMACIÓN PROFESIONAL • PERÚ")
+  imagenFondoUrl        String   @default("/sliders/slider-default.jpg")
+  textoBotonPrincipal   String   @default("Explorar cursos")
+  enlaceBotonPrincipal  String   @default("#cursos-y-diplomados")
+  textoBotonSecundario  String?  @default("Simulador OECE")
+  enlaceBotonSecundario String?  @default("#simulador-oece")
+  activo                Boolean  @default(true)
+  orden                 Int      @default(1)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+// ============================================================================
+// 3. AUTENTICACIÓN, ONBOARDING OBLIGATORIO, ROLES Y CAMBIO DE CORREO (1.2)
+// ============================================================================
+
+model User {
+  id                      String     @id @default(cuid())
+  name                    String?
+  nombres                 String?
+  apellidos               String?
+  dni                     String?    @unique
+  telefono                String?
+  entidadLaboral          String?
+  cargoActual             String?
+  profesionGrado          String?
+  email                   String     @unique
+  correoAlternativo       String?
+  emailVerified           DateTime?
+  image                   String?
+  passwordHash            String?
+  rol                     RolUsuario @default(ESTUDIANTE)
+  activo                  Boolean    @default(true)
+
+  // Control de Onboarding obligatorio al ingresar por primera vez con Google
+  perfilCompletado        Boolean    @default(false)
+  requiereCambioPassword  Boolean    @default(false)
+
+  // Datos exclusivos para rol PROFESOR
+  especialidadDocente     String?
+  resumenBiografia        String?    @db.Text
+  firmaDocenteUrl         String?
+
+  // Datos de origen si provino de la migración masiva de 4,200 alumnos (1.9)
+  migradoDesdeExcel       Boolean    @default(false)
+  loteMigracionId         String?
+  loteMigracion           LoteMigracionExcel?  @relation("UsuariosMigradosEnLote", fields: [loteMigracionId], references: [id])
+  lotesEjecutados         LoteMigracionExcel[] @relation("EjecutorMigracionExcel")
+
+  createdAt               DateTime   @default(now())
+  updatedAt               DateTime   @updatedAt
+
+  // Relaciones NextAuth (Google OAuth + Sesiones)
+  accounts                Account[]
+  sessions                Session[]
+  tokensSeguridad         TokenSeguridadUsuario[]
+
+  // Permisos granulares asignados (Asistente Administrativo, Contaduría, Secretaría)
+  permisosEspecificos     UsuarioPermiso[]
+
+  // Relaciones Académicas, Temporadas y Secciones
+  cursosComoProfesor      CursoPrograma[]                 @relation("ProfesorTitular")
+  seccionesComoDocente    SeccionCursoTemporada[]         @relation("DocenteSeccion")
+  matriculas              MatriculaEstudiante[]
+  progresoLecciones       ProgresoLeccion[]
+  asistenciasSeccion      AsistenciaEstudianteSeccion[]
+  calificacionesSeccion   CalificacionSeccionEstudiante[]
+  entregasTareas          EntregaTarea[]
+  intentosEvaluacion      IntentoEvaluacion[]
+  certificados            Certificado[]
+  comentarios             ComentarioCurso[]
+  mensajesForo            MensajeForoSeccion[]
+  articulosPublicados     ArticuloBlogRecurso[]
+
+  // Relaciones Simulacros OECE y Suscripciones
+  planesSimulacroOECE     SuscripcionSimulacroOECE[]
+  suscripcionesCatalogo   SuscripcionEstudiante[]
+
+  // Relaciones E-Commerce, Pagos y Auditoría (1.8)
+  carrito                 CarritoCompras?
+  pedidos                 Pedido[]                        @relation("PedidosEstudiante")
+  cuotasFinancieras       CuotaEstudiante[]
+  pagosRevisados          OperacionPago[]                 @relation("RevisorPagoManual")
+  auditoriasPago          AuditoriaOperacionPago[]        @relation("ActorAuditoriaPago")
+  cuentasValidadoras      ResponsableValidacionPago[]
+
+  // Notificaciones, Consultas, Cambio de Correo por WhatsApp y Seguridad
+  notificacionesCorreo    RegistroNotificacionCorreo[]
+  reclamaciones           LibroReclamacion[]
+  solicitudesAtencion     SolicitudAtencionUsuario[]
+  solicitudesCambioCorreo SolicitudCambioCorreo[]         @relation("UsuarioSolicitanteCorreo")
+  cambiosCorreoEjecutados SolicitudCambioCorreo[]         @relation("AdminAprobadorCorreo")
+  registrosActividad      RegistroActividadSistema[]
+
+  @@index([email])
+  @@index([dni])
+  @@index([rol])
+}
+
+model SolicitudCambioCorreo {
+  id               String    @id @default(cuid())
+  usuarioId        String?
+  dniSolicitante   String
+  nombresApellidos String
+  correoAnterior   String
+  correoNuevo      String
+  telefonoWhatsapp String
+  motivoSolicitud  String?   @db.Text
+  estado           String    @default("PENDIENTE") // "PENDIENTE" | "APROBADO" | "RECHAZADO"
+  ejecutadoPorId   String?
+  fechaResolucion  DateTime?
+  createdAt        DateTime  @default(now())
+
+  usuario          User?     @relation("UsuarioSolicitanteCorreo", fields: [usuarioId], references: [id])
+  ejecutadoPor     User?     @relation("AdminAprobadorCorreo", fields: [ejecutadoPorId], references: [id])
+
+  @@index([correoAnterior])
+  @@index([dniSolicitante])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model TokenSeguridadUsuario {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  tipo      String   // "ACTIVACION_POST_COMPRA" | "RECUPERACION_PASSWORD" | "RESTAURACION_CORREO"
+  usado     Boolean  @default(false)
+  expiraEn  DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model PermisoRolPlantilla {
+  id      String         @id @default(cuid())
+  rol     RolUsuario
+  permiso PermisoSistema
+  activo  Boolean        @default(true)
+
+  @@unique([rol, permiso])
+}
+
+model UsuarioPermiso {
+  id          String         @id @default(cuid())
+  userId      String
+  permiso     PermisoSistema
+  concedido   Boolean        @default(true)
+  asignadoPor String?
+  createdAt   DateTime       @default(now())
+
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permiso])
+}
+
+// ============================================================================
+// 4. CATEGORÍAS, CURSO MAESTRO, TEMPORADAS Y SECCIONES CONFIGURABLES
+// ============================================================================
+
+model CategoriaAcademica {
+  id                  String          @id @default(cuid())
+  nombre              String          // Ej: "Gestión Pública", "Ingeniería", "Salud", "Educación"
+  slug                String          @unique
+  descripcion         String?         @db.Text
+  subcategoriasTexto  String?         // Ej: "Contrataciones públicas, presupuesto, SIAF, SIGA, Invierte.pe"
+  icono               String?
+  imagenUrl           String?         @default("/categorias/default.jpg")
+  colorHex            String?         @default("#09090b")
+  esAreaPrincipalHome Boolean         @default(true)
+  activa              Boolean         @default(true)
+  orden               Int             @default(1)
+
+  cursos              CursoPrograma[]
+}
+
+// CURSO MAESTRO (Contiene todos los módulos, sesiones, videos, PPTs/PDFs en Drive o Servidor y Cuestionarios)
+model CursoPrograma {
+  id                            String                   @id @default(cuid())
+  codigoInterno                 String                   @unique // Número ID del curso
+  titulo                        String                   // Nombre completo del curso
+  nombreCorto                   String?                  // Nombre corto del curso
+  slug                          String                   @unique
+  subcategoriaEtiqueta          String?
+  resumen                       String                   @db.Text
+  descripcionCompleta           String                   @db.Text
+  formatoDescripcion            String?                  @db.Text // Formato (sesiones, módulos, temas)
+  imagenPortada                 String?                  @default("/cursos/default-curso.jpg")
+  iconoSistemaUrl               String?
+  videoPresentacionUrl          String?
+
+  idioma                        String                   @default("Español")
+  mostrarCalificaciones         Boolean                  @default(true)
+  mostrarInformesSesion         Boolean                  @default(true)
+  tamanoMaxArchivoEstudianteMb  Int                      @default(15)
+
+  tipoPrograma                  TipoPrograma             @default(CURSO)
+  modalidad                     ModalidadCurso           @default(SINCRONO)
+  nivel                         NivelAcademico           @default(BASICO)
+  estado                        EstadoPublicacion        @default(BORRADOR)
+
+  numeroModulosBase             Int                      @default(4)
+  numeroSesionesBase            Int                      @default(8)
+  horasAcademicas               Int                      @default(40)
+  tipoHoras                     TipoHoraAcademica        @default(PEDAGOGICAS) // Pedagógicas o Normales
+  creditos                      Decimal?                 @db.Decimal(5, 2)
+
+  precioBase                    Decimal                  @db.Decimal(10, 2)
+  precioOferta                  Decimal?                 @db.Decimal(10, 2)
+  permitePagoEnCuotas           Boolean                  @default(false)
+  numeroCuotasMax               Int                      @default(1)
+  modalidadPagoPermitida        ModalidadPagoConfigurada @default(AMBOS)
+
+  // Configuración por defecto de Membresía y Simuladores
+  alcanceMembresia              AlcanceMembresiaCurso    @default(TODAS)
+  incluidoEnSuscripcion         Boolean                  @default(true)
+  incluyeSimuladorOECE          Boolean                  @default(false)
+
+  // Conexión inteligente con Carpeta Madre de Google Drive
+  carpetaGoogleDriveId          String?
+  enlaceCarpetaGoogleDrive      String?
+
+  categoriaId                   String
+  categoria                     CategoriaAcademica       @relation(fields: [categoriaId], references: [id])
+  profesorId                    String
+  profesor                      User                     @relation("ProfesorTitular", fields: [profesorId], references: [id])
+
+  fechaInicioClases             DateTime?
+  fechaFinClases                DateTime?
+  horarioTexto                  String?
+  enlaceSalaVivo                String?
+
+  certificacionIso              Boolean                  @default(true)
+  destacadoEnInicio             Boolean                  @default(false)
+  plantillaCertificadoUrl       String?
+  firmaDigitalCursoUrl          String?
+  soloImprimibleParaFirmaFisica Boolean                  @default(false)
+
+  createdAt                     DateTime                 @default(now())
+  updatedAt                     DateTime                 @updatedAt
+
+  modulos                       ModuloCurso[]
+  seccionesTemporada            SeccionCursoTemporada[]
+  evaluaciones                  Evaluacion[]
+  matriculas                    MatriculaEstudiante[]
+  certificados                  Certificado[]
+  comentarios                   ComentarioCurso[]
+  combosDondeParticipa          ComboPackItem[]
+  planesSuscripcionCursos       PlanSuscripcionCurso[]
+  itemsCarrito                  CarritoItem[]
+  itemsPedido                   PedidoItem[]
+  simuladoresVinculados   SimuladorCursoVinculado[]
+  @@index([slug])
+  @@index([categoriaId, tipoPrograma, estado])
+  @@index([profesorId])
+  
+}
+
+// TEMPORADA O PERIODO ACADÉMICO (Ej: "Temporada 2026-I", "Anual 2026")
+model TemporadaAcademica {
+  id          String                  @id @default(cuid())
+  codigo      String                  @unique
+  nombre      String
+  descripcion String?                 @db.Text
+  fechaInicio DateTime
+  fechaFin    DateTime
+  activa      Boolean                 @default(true)
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+
+  secciones   SeccionCursoTemporada[]
+
+  @@index([activa, fechaInicio])
+}
+
+// SECCIÓN CONFIGURABLE EN UNA TEMPORADA (Con checkboxes de membresías, simuladores, precio propio, Gmail y adecuación de materiales)
+model SeccionCursoTemporada {
+  id                              String                      @id @default(cuid())
+  codigoSeccion                   String                      @unique
+  nombreSeccion                   String
+  temporadaId                     String
+  cursoId                         String
+
+  // Docente asignado por su correo Gmail (o sin docente = 100% videos grabados)
+  docenteId                       String?
+  correoDocenteAsignado           String?
+  llevaDocente                    Boolean                     @default(true)
+  permisoDocenteEditarCurso       Boolean                     @default(false)
+
+  // Modalidad de inscripción y precio propio de la sección
+  permiteInscripcionPagoDirecto   Boolean                     @default(true)
+  precioSeccion                   Decimal                     @db.Decimal(10, 2)
+  precioOfertaSeccion             Decimal?                    @db.Decimal(10, 2)
+  visibleEnInicio                 Boolean                     @default(true)
+  cerradoSoloInvitados            Boolean                     @default(false)
+  abiertoTodoElAnio               Boolean                     @default(false)
+  activa                          Boolean                     @default(true)
+
+  // Configuración pedagógica y adecuación en esta sección
+  modalidadSeccion                ModalidadCurso              @default(SINCRONO)
+  llevarTodasSesionesPorDefecto   Boolean                     @default(true)
+  semanasDuracion                 Int                         @default(4)
+  cantidadSesionesHabilitadas     Int                         @default(8)
+  habilitarVideosGrabados         Boolean                     @default(true)
+  habilitarClasesVivoMeet         Boolean                     @default(true)
+  esquemaAsistenciaAgrupada       String?                     @default("POR_CLASE")
+  modoCuestionariosSeccion        String                      @default("POR_SESION") // "POR_SESION" | "INTERMEDIO_Y_FINAL" | "SOLO_FINAL" | "SIN_CUESTIONARIOS"
+  modoTareas                      ModoTareasSeccion           @default(TAREA_POR_SESION)
+  instruccionesTareaGeneral       String?                     @db.Text
+
+  // Credencial / Certificado específico para esta sección
+  tipoAcreditacion                TipoAcreditacionSeccion     @default(POR_DEFECTO_CURSO)
+  tituloCredencialPersonalizado   String?
+  horasAcreditadasSeccion         Int?
+  tipoHorasAcreditadas            TipoHoraAcademica           @default(PEDAGOGICAS)
+  creditosAcreditadosSeccion      Decimal?                    @db.Decimal(5, 2)
+  incluirFirmaDigitalEnPdf        Boolean                     @default(true)
+
+  // Alcance general opcional
+  alcanceMembresiaSeccion         AlcanceMembresiaCurso       @default(ESPECIFICAS)
+  incluyeSimuladorOECE            Boolean                     @default(false)
+  simuladorEvaluacionId           String?
+
+  // Aula Virtual de la sección (Fechas, Horario, Grupo de WhatsApp y Foro)
+  fechaInicioSeccion              DateTime?
+  fechaFinSeccion                 DateTime?
+  horarioSeccionTexto             String?
+  enlaceGrupoWhatsapp             String?
+  foroHabilitado                  Boolean                     @default(true)
+
+  createdAt                       DateTime                    @default(now())
+  updatedAt                       DateTime                    @updatedAt
+
+  temporada                       TemporadaAcademica          @relation(fields: [temporadaId], references: [id], onDelete: Cascade)
+  curso                           CursoPrograma               @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+  docente                         User?                       @relation("DocenteSeccion", fields: [docenteId], references: [id])
+
+  sesionesHabilitadas             SesionSeccionConfig[]
+  clasesVivoMeet                  ClaseVivoMeetSeccion[]
+  invitacionesCorreo              InvitacionSeccionCorreo[]
+  matriculas                      MatriculaEstudiante[]
+  asistencias                     AsistenciaEstudianteSeccion[]
+  calificaciones                  CalificacionSeccionEstudiante[]
+  mensajesForo                    MensajeForoSeccion[]
+  certificados                    Certificado[]
+  planesMembresiaPermitidos       SeccionMembresiaPermitida[]
+  simuladoresPermitidos           SeccionSimuladorPermitido[]
+  itemsCarrito                    CarritoItem[]
+  itemsPedido                     PedidoItem[]
+
+  @@index([temporadaId, cursoId])
+  @@index([visibleEnInicio, activa])
+  @@index([docenteId])
+}
+
+// Adecuación de cada sesión/material del curso específicamente para esta Sección y agrupación de varias sesiones en una Clase
+model SesionSeccionConfig {
+  id                         String                @id @default(cuid())
+  seccionId                  String
+  leccionId                  String
+  habilitada                 Boolean               @default(true)
+  numeroClaseAgrupada        Int                   @default(1) // Ej: Agrupar 5 sesiones/materiales en la "Clase 1" de esta sección
+  tituloPersonalizadoSeccion String?
+  videoUrlOverrideSeccion    String?               // Permite usar otro video/grabación en esta sección sin alterar el curso maestro
+  materialDriveUrlOverride   String?               // Permite usar otro PPT/PDF/Drive en esta sección sin alterar el curso maestro
+  mostrarVideoGrabado        Boolean               @default(true)
+  esEnVivoMeet               Boolean               @default(false)
+  requiereTareaEnSesion      Boolean               @default(true)
+  requiereExamenEnSesion     Boolean               @default(true)
+  ordenEnSeccion             Int                   @default(1)
+
+  seccion                    SeccionCursoTemporada @relation(fields: [seccionId], references: [id], onDelete: Cascade)
+  leccion                    LeccionCurso          @relation(fields: [leccionId], references: [id], onDelete: Cascade)
+
+  @@unique([seccionId, leccionId])
+}
+
+// Checkboxes de Múltiples Membresías permitidas en una Sección
+model SeccionMembresiaPermitida {
+  id                String                  @id @default(cuid())
+  seccionId         String
+  planSuscripcionId String
+
+  seccion           SeccionCursoTemporada   @relation(fields: [seccionId], references: [id], onDelete: Cascade)
+  planSuscripcion   PlanSuscripcionCatalogo @relation(fields: [planSuscripcionId], references: [id], onDelete: Cascade)
+
+  @@unique([seccionId, planSuscripcionId])
+}
+
+// Checkboxes de Múltiples Simuladores habilitados en una Sección
+model SeccionSimuladorPermitido {
+  id              String                @id @default(cuid())
+  seccionId       String
+  planSimulacroId String
+
+  seccion         SeccionCursoTemporada @relation(fields: [seccionId], references: [id], onDelete: Cascade)
+  planSimulacro   PlanSimulacroOECE     @relation(fields: [planSimulacroId], references: [id], onDelete: Cascade)
+
+  @@unique([seccionId, planSimulacroId])
+}
+
+// Programación de clases en vivo (Google Meet / Calendar) para una Sección
+model ClaseVivoMeetSeccion {
+  id                        String                        @id @default(cuid())
+  seccionId                 String
+  numeroClase               Int                           @default(1)
+  tituloClase               String
+  sesionesCubiertasNumeros  String                        @default("1")
+  cantidadSesionesEquiv     Int                           @default(1)
+  fechaHoraInicio           DateTime
+  fechaHoraFin              DateTime
+  horasTrabajoDocente       Decimal                       @default(2.00) @db.Decimal(4, 2)
+  enlaceGoogleMeet          String?
+  googleCalendarEventId     String?
+  enlaceGrabacionResultante String?
+
+  seccion                   SeccionCursoTemporada         @relation(fields: [seccionId], references: [id], onDelete: Cascade)
+  asistencias               AsistenciaEstudianteSeccion[]
+
+  @@index([seccionId, numeroClase])
+}
+
+// Control de asistencia por estudiante en cada sesión/clase de la Sección (automático o editable por Docente/Admin)
+model AsistenciaEstudianteSeccion {
+  id                   String                @id @default(cuid())
+  seccionId            String
+  estudianteId         String
+  claseMeetId          String?
+  numeroSesionCubierta Int                   @default(1)
+  estado               EstadoAsistencia      @default(ASISTIO)
+  marcadoAutomatico    Boolean               @default(false)
+  editadoPorId         String?
+  observacion          String?
+  fechaRegistro        DateTime              @default(now())
+
+  seccion              SeccionCursoTemporada @relation(fields: [seccionId], references: [id], onDelete: Cascade)
+  estudiante           User                  @relation(fields: [estudianteId], references: [id], onDelete: Cascade)
+  claseMeet            ClaseVivoMeetSeccion? @relation(fields: [claseMeetId], references: [id], onDelete: SetNull)
+
+  @@unique([seccionId, estudianteId, numeroSesionCubierta])
+  @@index([seccionId, estudianteId])
+}
+
+// Invitaciones por correo Gmail a una Sección (con envío de correo institucional con logo)
+model InvitacionSeccionCorreo {
+  id               String                @id @default(cuid())
+  seccionId        String
+  correoGmail      String
+  nombresInvitado  String?
+  rolInvitado      RolUsuario            @default(ESTUDIANTE)
+  correoEnviado    Boolean               @default(false)
+  fechaEnvioCorreo DateTime?
+  aceptada         Boolean               @default(false)
+  fechaAceptacion  DateTime?
+  invitadoPorId    String?
+  createdAt        DateTime              @default(now())
+
+  seccion          SeccionCursoTemporada @relation(fields: [seccionId], references: [id], onDelete: Cascade)
+
+  @@unique([seccionId, correoGmail])
+  @@index([correoGmail])
+}
+
+// Subida intuitiva de notas con comentarios del docente por módulo/sesión en cada Sección
+model CalificacionSeccionEstudiante {
+  id                String                @id @default(cuid())
+  seccionId         String
+  estudianteId      String
+  moduloId          String?
+  leccionId         String?
+  conceptoEvaluado  String
+  nota              Decimal               @db.Decimal(5, 2)
+  comentarioDocente String?               @db.Text
+  registradoPorId   String?
+  updatedAt         DateTime              @updatedAt
+
+  seccion           SeccionCursoTemporada @relation(fields: [seccionId], references: [id], onDelete: Cascade)
+  estudiante        User                  @relation(fields: [estudianteId], references: [id], onDelete: Cascade)
+
+  @@index([seccionId, estudianteId])
+}
+
+// Foro de dudas y comentarios por Sección
+model MensajeForoSeccion {
+  id        String                @id @default(cuid())
+  seccionId String
+  autorId   String
+  mensaje   String                @db.Text
+  createdAt DateTime              @default(now())
+
+  seccion   SeccionCursoTemporada @relation(fields: [seccionId], references: [id], onDelete: Cascade)
+  autor     User                  @relation(fields: [autorId], references: [id], onDelete: Cascade)
+
+  @@index([seccionId, createdAt])
+}
+
+// MÓDULOS, SESIONES (LECCIONES) Y MATERIALES INTELIGENTES (DRIVE / SERVIDOR)
+model ModuloCurso {
+  id           String         @id @default(cuid())
+  cursoId      String
+  titulo       String
+  descripcion  String?        @db.Text
+  orden        Int            @default(1)
+  publicado    Boolean        @default(true)
+
+  curso        CursoPrograma  @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+  lecciones    LeccionCurso[]
+  evaluaciones Evaluacion[]
+
+  @@index([cursoId, orden])
+}
+
+model LeccionCurso {
+  id                       String                       @id @default(cuid())
+  moduloId                 String
+  numeroSesionGlobal       Int                          @default(1)
+  titulo                   String
+  temasDetalle             String?                      @db.Text
+  contenidoHtml            String?                      @db.Text
+  origenVideo              OrigenAlmacenamientoMaterial @default(GOOGLE_DRIVE_LINK)
+  videoUrl                 String?
+  googleDriveVideoFileId   String?
+  duracionMinutos          Int                          @default(45)
+  esGratuita               Boolean                      @default(false)
+  esSesionSincrona         Boolean                      @default(false)
+  fechaSesionVivo          DateTime?
+  linkGrabacionVivo        String?
+  orden                    Int                          @default(1)
+
+  modulo                   ModuloCurso                  @relation(fields: [moduloId], references: [id], onDelete: Cascade)
+  recursosAdjuntos         RecursoLeccion[]
+  tareas                   TareaLeccion[]
+  evaluaciones             Evaluacion[]
+  progresos                ProgresoLeccion[]
+  configuracionesEnSeccion SesionSeccionConfig[]
+
+  @@index([moduloId, orden])
+}
+
+// Materiales (PPT, PDF, TXT, Excel, Videos) con soporte directo al servidor o vínculo vivo con Google Drive
+model RecursoLeccion {
+  id                         String                       @id @default(cuid())
+  leccionId                  String
+  titulo                     String
+  tipoArchivo                String                       // "PPTX" | "PDF" | "TXT" | "VIDEO" | "XLSX" | "LINK_DRIVE"
+  origenAlmacenamiento       OrigenAlmacenamientoMaterial @default(GOOGLE_DRIVE_LINK)
+  archivoUrl                 String
+  googleDriveFileId          String?
+  sincronizarAutomaticoDrive Boolean                      @default(true)
+  tamanoKb                   Int?
+  orden                      Int                          @default(1)
+
+  leccion                    LeccionCurso                 @relation(fields: [leccionId], references: [id], onDelete: Cascade)
+}
+
+model TareaLeccion {
+  id            String         @id @default(cuid())
+  leccionId     String
+  titulo        String
+  instrucciones String         @db.Text
+  fechaLimite   DateTime?
+  puntajeMaximo Decimal        @default(20.00) @db.Decimal(5, 2)
+  obligatoria   Boolean        @default(true)
+
+  leccion       LeccionCurso   @relation(fields: [leccionId], references: [id], onDelete: Cascade)
+  entregas      EntregaTarea[]
+}
+
+model EntregaTarea {
+  id                String       @id @default(cuid())
+  tareaId           String
+  seccionId         String?
+  estudianteId      String
+  archivoEntregaUrl String
+  comentarioAlumno  String?      @db.Text
+  calificacion      Decimal?     @db.Decimal(5, 2)
+  retroalimentacion String?      @db.Text
+  calificadoPorId   String?
+  fechaEntrega      DateTime     @default(now())
+  fechaCalificacion DateTime?
+
+  tarea             TareaLeccion @relation(fields: [tareaId], references: [id], onDelete: Cascade)
+  estudiante        User         @relation(fields: [estudianteId], references: [id], onDelete: Cascade)
+
+  @@unique([tareaId, estudianteId])
+}
+
+model ComboPack {
+  id                      String                   @id @default(cuid())
+  codigo                  String                   @unique
+  nombre                  String
+  slug                    String                   @unique
+  descripcion             String                   @db.Text
+  imagenPortada           String?                  @default("/cursos/default-combo.jpg")
+  precioCombo             Decimal                  @db.Decimal(10, 2)
+  emiteCertificadoPack    Boolean                  @default(true)
+  horasTotalesCertificado Int                      @default(120)
+  modalidadPagoPermitida  ModalidadPagoConfigurada @default(AMBOS)
+  activo                  Boolean                  @default(true)
+  createdAt               DateTime                 @default(now())
+
+  cursosIncluidos         ComboPackItem[]
+  itemsCarrito            CarritoItem[]
+  itemsPedido             PedidoItem[]
+}
+
+model ComboPackItem {
+  id                         String        @id @default(cuid())
+  comboId                    String
+  cursoId                    String
+  emiteCertificadoIndividual Boolean       @default(true)
+
+  combo                      ComboPack     @relation(fields: [comboId], references: [id], onDelete: Cascade)
+  curso                      CursoPrograma @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+
+  @@unique([comboId, cursoId])
+}
+
+// ============================================================================
+// 5. MÚLTIPLES SIMULADORES OECE Y MÚLTIPLES MEMBRESÍAS EDITABLES
+// ============================================================================
+
+model PlanSimulacroOECE {
+  id                           String                        @id @default(cuid())
+  codigo                       String                        @unique
+  nombre                       String
+  nivel                        NivelSimulacroOECE            @default(PREMIUM)
+  imagenPortada                String?                       @default("/simuladores/oece-default.jpg")
+  descripcion                  String                        @default("") @db.Text
+  condicionesUso               String                        @default("Simulador configurable") @db.Text
+
+  // Venta individual y visibilidad en la página principal
+  permiteVentaIndividual       Boolean                       @default(true)
+  precio                       Decimal                       @db.Decimal(10, 2)
+  precioOferta                 Decimal?                      @db.Decimal(10, 2)
+  visibleEnInicio              Boolean                       @default(true)
+
+  // Vinculación con Cursos y Suscripciones
+  permitirVincularACursos      Boolean                       @default(true)
+
+  duracionDiasVigencia         Int                           @default(30)
+  intentosMaximosSimulacro     Int                           @default(10)
+
+  // Cantidad de preguntas y modo Demo en página principal
+  cantidadPreguntasHabilitadas Int                           @default(100)
+  habilitarDemoEnInicio        Boolean                       @default(true)
+  cantidadPreguntasDemo        Int                           @default(5)
+
+  accesoBancoPreguntas         Boolean                       @default(true)
+  accesoRetroalimentacion      Boolean                       @default(true)
+  incluyeCertificadoSimulacro  Boolean                       @default(false)
+  modalidadPagoPermitida       ModalidadPagoConfigurada      @default(AMBOS)
+  activo                       Boolean                       @default(true)
+
+  cronogramas                  CronogramaSimulacroOECE[]
+  evaluacionesSimulacro        Evaluacion[]
+  suscripcionesActivas         SuscripcionSimulacroOECE[]
+  seccionesDondeParticipa      SeccionSimuladorPermitido[]
+  membresiasDondeSeIncluye     SimuladorMembresiaPermitida[]
+  cursosVinculados             SimuladorCursoVinculado[]
+  itemsCarrito                 CarritoItem[]
+  itemsPedido                  PedidoItem[]
+}
+model SimuladorCursoVinculado {
+  id              String            @id @default(cuid())
+  planSimulacroId String
+  cursoId         String
+
+  planSimulacro   PlanSimulacroOECE @relation(fields: [planSimulacroId], references: [id], onDelete: Cascade)
+  curso           CursoPrograma     @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+
+  @@unique([planSimulacroId, cursoId])
+}
+model CronogramaSimulacroOECE {
+  id                  String            @id @default(cuid())
+  planSimulacroId     String
+  tituloEvento        String
+  descripcion         String?
+  fechaHoraInicio     DateTime
+  fechaHoraCierre     DateTime
+  enlaceInstrucciones String?
+  activo              Boolean           @default(true)
+
+  planSimulacro       PlanSimulacroOECE @relation(fields: [planSimulacroId], references: [id], onDelete: Cascade)
+}
+model SimuladorMembresiaPermitida {
+  id                String                  @id @default(cuid())
+  planSimulacroId   String
+  planSuscripcionId String
+
+  planSimulacro     PlanSimulacroOECE       @relation(fields: [planSimulacroId], references: [id], onDelete: Cascade)
+  planSuscripcion   PlanSuscripcionCatalogo @relation(fields: [planSuscripcionId], references: [id], onDelete: Cascade)
+
+  @@unique([planSimulacroId, planSuscripcionId])
+}
+model SuscripcionSimulacroOECE {
+  id                   String                 @id @default(cuid())
+  estudianteId         String
+  planSimulacroId      String
+  pedidoOrigenId       String?
+  estado               EstadoVigenciaServicio @default(PENDIENTE_ACTIVACION)
+  fechaActivacion      DateTime?
+  fechaVencimiento     DateTime?
+  intentosConsumidos   Int                    @default(0)
+  renovacionAutomatica Boolean                @default(false)
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+
+  estudiante           User                   @relation(fields: [estudianteId], references: [id], onDelete: Cascade)
+  planSimulacro        PlanSimulacroOECE      @relation(fields: [planSimulacroId], references: [id])
+
+  @@index([estudianteId, estado])
+}
+
+// MEMBRESÍAS (Permite crear Normal 1 mes, Cartón 3 meses, Premium 1 año, VIP 2 años, etc.)
+model PlanSuscripcionCatalogo {
+  id                            String                      @id @default(cuid())
+  codigo                        String                      @unique
+  nombre                        String
+  periodo                       PeriodoSuscripcion          @default(PERSONALIZADO)
+  etiquetaDuracionTexto         String                      @default("30 días")
+  imagenPortada                 String?                     @default("/membresias/default-membresia.jpg")
+  descripcion                   String                      @default("") @db.Text
+  condicionesServicio           String                      @default("Acceso según configuración de sección") @db.Text
+  precio                        Decimal                     @db.Decimal(10, 2)
+  duracionDias                  Int                         @default(30)
+  accesoTotalCatalogo           Boolean                     @default(false)
+  incluyeSimuladorOECE          Boolean                     @default(true)
+  cantidadPreguntasSimulador    Int                         @default(100)
+  incluyeCertificados           Boolean                     @default(true)
+  destacado                     Boolean                     @default(false)
+  notificarCambiosASuscriptores Boolean                     @default(true)
+  modalidadPagoPermitida        ModalidadPagoConfigurada    @default(AMBOS)
+  activo                        Boolean                     @default(true)
+  orden                         Int                         @default(1)
+  updatedAt                     DateTime                    @updatedAt
+
+  cursosIncluidos               PlanSuscripcionCurso[]
+  seccionesIncluidas            SeccionMembresiaPermitida[]
+  suscripcionesEstudiantes      SuscripcionEstudiante[]
+  itemsCarrito                  CarritoItem[]
+  itemsPedido                   PedidoItem[]
+  simuladoresIncluidos    SimuladorMembresiaPermitida[]
+}
+
+model PlanSuscripcionCurso {
+  id                String                  @id @default(cuid())
+  planSuscripcionId String
+  cursoId           String
+
+  planSuscripcion   PlanSuscripcionCatalogo @relation(fields: [planSuscripcionId], references: [id], onDelete: Cascade)
+  curso             CursoPrograma           @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+
+  @@unique([planSuscripcionId, cursoId])
+}
+
+model SuscripcionEstudiante {
+  id                     String                  @id @default(cuid())
+  estudianteId           String
+  planSuscripcionId      String
+  pedidoOrigenId         String?
+  estado                 EstadoVigenciaServicio  @default(PENDIENTE_ACTIVACION)
+  fechaInicio            DateTime?
+  fechaVencimiento       DateTime?
+  duracionContratadaDias Int
+  renovacionesContador   Int                     @default(0)
+  renovacionAutomatica   Boolean                 @default(false)
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+
+  estudiante             User                    @relation(fields: [estudianteId], references: [id], onDelete: Cascade)
+  planSuscripcion        PlanSuscripcionCatalogo @relation(fields: [planSuscripcionId], references: [id])
+
+  @@index([estudianteId, estado])
+  @@index([fechaVencimiento])
+}
+
+// ============================================================================
+// 6. MATRÍCULAS, EVALUACIONES, SIMULADORES EXCEL Y CERTIFICADOS DOBLE CARA QR
+// ============================================================================
+
+model MatriculaEstudiante {
+  id                     String                 @id @default(cuid())
+  estudianteId           String
+  cursoId                String
+  seccionId              String?
+  origenAcceso           String                 @default("COMPRA_INDIVIDUAL") // "COMPRA_INDIVIDUAL" | "MEMBRESIA" | "INVITACION_CORREO"
+  pedidoOrigenId         String?
+  estado                 EstadoVigenciaServicio @default(PENDIENTE_ACTIVACION)
+  porcentajeProgreso     Decimal                @default(0.00) @db.Decimal(5, 2)
+  etapaActualCompletada  Int                    @default(0) // Línea de progreso 1 - 2 - 3 - 4 - 5
+  notaFinalPromedio      Decimal?               @db.Decimal(5, 2)
+  aprobado               Boolean                @default(false)
+  habilitadoImprimirCert Boolean                @default(false)
+  fechaMatricula         DateTime               @default(now())
+  fechaActivacion        DateTime?
+  fechaVencimientoAcceso DateTime?
+  fechaCulminacion       DateTime?
+
+  estudiante             User                   @relation(fields: [estudianteId], references: [id], onDelete: Cascade)
+  curso                  CursoPrograma          @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+  seccion                SeccionCursoTemporada? @relation(fields: [seccionId], references: [id], onDelete: SetNull)
+  cuotas                 CuotaEstudiante[]
+
+  @@index([estudianteId, estado])
+  @@index([seccionId])
+}
+
+model ProgresoLeccion {
+  id              String       @id @default(cuid())
+  estudianteId    String
+  leccionId       String
+  seccionId       String?
+  completada      Boolean      @default(false)
+  segundosVistos  Int          @default(0)
+  fechaCompletado DateTime?
+
+  estudiante      User         @relation(fields: [estudianteId], references: [id], onDelete: Cascade)
+  leccion         LeccionCurso @relation(fields: [leccionId], references: [id], onDelete: Cascade)
+
+  @@unique([estudianteId, leccionId])
+}
+
+model Evaluacion {
+  id                       String               @id @default(cuid())
+  titulo                   String
+  descripcion              String?              @db.Text
+  esSimulacroOECE          Boolean              @default(false)
+  habilitarDemoInicio      Boolean              @default(false)
+  cantidadPreguntasDemo    Int                  @default(5)
+  archivoExcelImportadoUrl String?
+
+  cursoId                  String?
+  moduloId                 String?
+  leccionId                String?
+  planSimulacroId          String?
+
+  duracionMinutos          Int                  @default(60)
+  notaMinimaAprobatoria    Decimal              @default(14.00) @db.Decimal(5, 2)
+  notaMaxima               Decimal              @default(20.00) @db.Decimal(5, 2)
+  intentosPermitidos       Int                  @default(3)
+  modoPracticaSinTiempo    Boolean              @default(true)
+  preguntasAleatorias      Boolean              @default(true)
+  mostrarRespuestasAlFinal Boolean              @default(true)
+  activa                   Boolean              @default(true)
+
+  curso                    CursoPrograma?       @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+  modulo                   ModuloCurso?         @relation(fields: [moduloId], references: [id], onDelete: Cascade)
+  leccion                  LeccionCurso?        @relation(fields: [leccionId], references: [id], onDelete: Cascade)
+  planSimulacro            PlanSimulacroOECE?   @relation(fields: [planSimulacroId], references: [id], onDelete: Cascade)
+
+  preguntas                PreguntaEvaluacion[]
+  intentos                 IntentoEvaluacion[]
+}
+
+model PreguntaEvaluacion {
+  id                  String             @id @default(cuid())
+  evaluacionId        String
+  enunciado           String             @db.Text
+  categoriaTematica   String?
+  referenciaNormativa String?
+  nivelDificultad     String?            @default("INTERMEDIO")
+  imagenApoyoUrl      String?
+  tipoPregunta        TipoPreguntaExamen @default(OPCION_UNICA)
+  puntaje             Decimal            @default(1.00) @db.Decimal(5, 2)
+  explicacionSolucion String?            @db.Text
+  esPreguntaDemo      Boolean            @default(false)
+  orden               Int                @default(1)
+
+  evaluacion          Evaluacion         @relation(fields: [evaluacionId], references: [id], onDelete: Cascade)
+  opciones            OpcionPregunta[]
+}
+
+model OpcionPregunta {
+  id          String             @id @default(cuid())
+  preguntaId  String
+  letraOpcion String?            @default("A")
+  textoOpcion String             @db.Text
+  esCorrecta  Boolean            @default(false)
+  orden       Int                @default(1)
+
+  pregunta    PreguntaEvaluacion @relation(fields: [preguntaId], references: [id], onDelete: Cascade)
+}
+
+model IntentoEvaluacion {
+  id                   String     @id @default(cuid())
+  evaluacionId         String
+  estudianteId         String
+  seccionId            String?
+  esModoPractica       Boolean    @default(false)
+  numeroIntento        Int        @default(1)
+  fechaInicio          DateTime   @default(now())
+  fechaFin             DateTime?
+  respuestasJson       Json
+  temasReforzarJson    Json?
+  puntajeObtenido      Decimal    @default(0.00) @db.Decimal(5, 2)
+  porcentajeAciertos   Decimal    @default(0.00) @db.Decimal(5, 2)
+  aprobado             Boolean    @default(false)
+  calificadoAutomatico Boolean    @default(true)
+
+  evaluacion           Evaluacion @relation(fields: [evaluacionId], references: [id], onDelete: Cascade)
+  estudiante           User       @relation(fields: [estudianteId], references: [id], onDelete: Cascade)
+
+  @@index([estudianteId, evaluacionId])
+}
+
+// CERTIFICADO / CREDENCIAL CON QR ÚNICO (ANVERSO Y REVERSO CON MÓDULOS, NOTAS, TEMPORADA Y SECCIÓN)
+model Certificado {
+  id                          String                  @id @default(cuid())
+  codigoUnico                 String                  @unique
+  codigoVerificacionQR        String                  @unique @default(cuid())
+  estudianteId                String
+  dniTitular                  String
+  nombreCompletoTitular       String
+
+  cursoId                     String?
+  seccionId                   String?
+  temporadaNombreImpreso      String?
+  seccionNombreImpreso        String?
+  nombreProgramaImpreso       String
+  tipoProgramaImpreso         TipoPrograma            @default(CURSO)
+  tipoAcreditacionImpreso     TipoAcreditacionSeccion @default(POR_DEFECTO_CURSO)
+
+  horasAcademicas             Int
+  tipoHorasImpreso            TipoHoraAcademica       @default(PEDAGOGICAS)
+  creditos                    Decimal?                @db.Decimal(5, 2)
+  notaObtenida                Decimal?                @db.Decimal(5, 2)
+  detalleModulosYNotasReverso Json?
+  codigoCertificacionIso      String?                 @default("ISO 9001:2015 CO24.00145/U")
+
+  fechaInicioCurso            DateTime?
+  fechaTerminoCurso           DateTime?
+  fechaEmision                DateTime                @default(now())
+  emitidoConFechaPasada       Boolean                 @default(false)
+
+  // Configuración de firma (con firma digital o limpio para firma física después de imprimir)
+  incluirFirmaDigital         Boolean                 @default(true)
+  firmaPrincipalUrl           String?
+  firmaSecundariaUrl          String?
+
+  urlVerificacionPublica      String
+  archivoPdfUrl               String?
+  plantillaDisenoJson         Json?
+  anulado                     Boolean                 @default(false)
+  motivoAnulacion             String?
+
+  esMigradoExcel              Boolean                 @default(false)
+  loteMigracionId             String?
+  loteMigracion               LoteMigracionExcel?     @relation(fields: [loteMigracionId], references: [id])
+
+  estudiante                  User                    @relation(fields: [estudianteId], references: [id])
+  curso                       CursoPrograma?          @relation(fields: [cursoId], references: [id])
+  seccion                     SeccionCursoTemporada?  @relation(fields: [seccionId], references: [id])
+
+  @@index([dniTitular])
+  @@index([codigoUnico])
+  @@index([codigoVerificacionQR])
+  @@index([estudianteId])
+  @@index([seccionId])
+}
+
+// ============================================================================
+// 7. PASARELA DE PAGOS HÍBRIDA, VOUCHERS IRREPETIBLES Y FINANZAS POR SECCIÓN
+// ============================================================================
+
+model ConfiguracionGeneralPagos {
+  id                               String                   @id @default(cuid())
+  claveConfiguracion               String                   @unique @default("PRINCIPAL")
+  pagoAutomaticoHabilitado         Boolean                  @default(true)
+  pagoManualHabilitado             Boolean                  @default(true)
+  modalidadPorDefecto              ModalidadPagoConfigurada @default(AMBOS)
+  horasExpiracionOrdenManual       Int                      @default(48)
+  instruccionesGeneralesPagoManual String                   @db.Text
+  formatosComprobantePermitidos    String                   @default("JPG,PNG,PDF")
+  tamanoMaximoComprobanteMb        Int                      @default(5)
+  updatedAt                        DateTime                 @updatedAt
+}
+
+model CuentaDestinoPagoManual {
+  id                      String          @id @default(cuid())
+  medioPago               ProveedorPago
+  nombreEntidad           String
+  titularCuenta           String
+  rucTitular              String?
+  numeroCuenta            String?
+  codigoCCI               String?
+  numeroCelularBilletera  String?
+  imagenQrUrl             String?
+  instruccionesPasoAPaso  String          @db.Text
+  requiereNumeroOperacion Boolean         @default(true)
+  requiereAdjuntarVoucher Boolean         @default(true)
+  activa                  Boolean         @default(true)
+  orden                   Int             @default(1)
+
+  operacionesManuales     OperacionPago[]
+}
+
+model ConfiguracionPasarelaAutomatica {
+  id                       String          @id @default(cuid())
+  proveedor                ProveedorPago   @unique
+  nombreVisible            String
+  habilitada               Boolean         @default(false)
+  modoProduccion           Boolean         @default(false)
+  publicKey                String?
+  merchantId               String?
+  variableEntornoSecretKey String
+  variableEntornoWebhook   String
+  monedasSoportadas        String          @default("PEN,USD")
+  comisionPorcentaje       Decimal         @default(0.00) @db.Decimal(5, 2)
+  ordenVisualizacion       Int             @default(1)
+  updatedAt                DateTime        @updatedAt
+
+  operacionesAutomaticas   OperacionPago[]
+}
+
+model ResponsableValidacionPago {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  puedeAprobar          Boolean  @default(true)
+  puedeRechazar         Boolean  @default(true)
+  montoMaximoAprobacion Decimal? @db.Decimal(10, 2)
+  recibeAlertasCorreo   Boolean  @default(true)
+  activo                Boolean  @default(true)
+  createdAt             DateTime @default(now())
+
+  usuario               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CuponDescuento {
+  id              String             @id @default(cuid())
+  codigo          String             @unique
+  descripcion     String?
+  tipoDescuento   TipoDescuentoCupon @default(PORCENTAJE)
+  valorDescuento  Decimal            @db.Decimal(10, 2)
+  usosMaximos     Int                @default(100)
+  usosActuales    Int                @default(0)
+  fechaInicio     DateTime           @default(now())
+  fechaExpiracion DateTime
+  activo          Boolean            @default(true)
+
+  pedidos         Pedido[]
+}
+
+model CarritoCompras {
+  id           String        @id @default(cuid())
+  estudianteId String        @unique
+  updatedAt    DateTime      @updatedAt
+
+  estudiante   User          @relation(fields: [estudianteId], references: [id], onDelete: Cascade)
+  items        CarritoItem[]
+}
+
+model CarritoItem {
+  id                String                   @id @default(cuid())
+  carritoId         String
+  concepto          ConceptoPago
+  cursoId           String?
+  seccionId         String?
+  comboId           String?
+  planSimulacroId   String?
+  planSuscripcionId String?
+  precioUnitario    Decimal                  @db.Decimal(10, 2)
+  createdAt         DateTime                 @default(now())
+
+  carrito           CarritoCompras           @relation(fields: [carritoId], references: [id], onDelete: Cascade)
+  curso             CursoPrograma?           @relation(fields: [cursoId], references: [id])
+  seccion           SeccionCursoTemporada?   @relation(fields: [seccionId], references: [id])
+  combo             ComboPack?               @relation(fields: [comboId], references: [id])
+  planSimulacro     PlanSimulacroOECE?       @relation(fields: [planSimulacroId], references: [id])
+  planSuscripcion   PlanSuscripcionCatalogo? @relation(fields: [planSuscripcionId], references: [id])
+}
+
+model Pedido {
+  id                        String                     @id @default(cuid())
+  numeroPedido              String                     @unique
+  estudianteId              String
+  modalidadElegida          ModalidadProcesamientoPago
+  estado                    EstadoOperacionPago        @default(PENDIENTE_PAGO)
+
+  moneda                    String                     @default("PEN")
+  subtotal                  Decimal                    @db.Decimal(10, 2)
+  descuento                 Decimal                    @default(0.00) @db.Decimal(10, 2)
+  total                     Decimal                    @db.Decimal(10, 2)
+
+  cuponId                   String?
+  cupon                     CuponDescuento?            @relation(fields: [cuponId], references: [id])
+
+  idempotencyKey            String                     @unique @default(cuid())
+  serviciosActivados        Boolean                    @default(false)
+  fechaActivacionServicios  DateTime?
+
+  tipoComprobanteSolicitado String                     @default("BOLETA")
+  documentoFacturacion      String?
+  razonSocialFacturacion    String?
+  direccionFacturacion      String?
+  comprobanteContableUrl    String?
+
+  fechaVencimientoPago      DateTime?
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
+
+  estudiante                User                       @relation("PedidosEstudiante", fields: [estudianteId], references: [id])
+  items                     PedidoItem[]
+  operacionesPago           OperacionPago[]
+
+  @@index([estudianteId, estado])
+  @@index([numeroPedido])
+  @@index([createdAt])
+}
+
+model PedidoItem {
+  id                String                   @id @default(cuid())
+  pedidoId          String
+  concepto          ConceptoPago
+  descripcionItem   String
+  cursoId           String?
+  seccionId         String?
+  comboId           String?
+  planSimulacroId   String?
+  planSuscripcionId String?
+  cuotaId           String?
+  precioPagado      Decimal                  @db.Decimal(10, 2)
+
+  pedido            Pedido                   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  curso             CursoPrograma?           @relation(fields: [cursoId], references: [id])
+  seccion           SeccionCursoTemporada?   @relation(fields: [seccionId], references: [id])
+  combo             ComboPack?               @relation(fields: [comboId], references: [id])
+  planSimulacro     PlanSimulacroOECE?       @relation(fields: [planSimulacroId], references: [id])
+  planSuscripcion   PlanSuscripcionCatalogo? @relation(fields: [planSuscripcionId], references: [id])
+  cuota             CuotaEstudiante?         @relation(fields: [cuotaId], references: [id])
+
+  @@index([seccionId])
+  @@index([cursoId])
+}
+
+model OperacionPago {
+  id                         String                           @id @default(cuid())
+  codigoOperacionInterno     String                           @unique @default(cuid())
+  pedidoId                   String
+  modalidad                  ModalidadProcesamientoPago
+  proveedorPago              ProveedorPago
+  estado                     EstadoOperacionPago              @default(PENDIENTE_PAGO)
+  monto                      Decimal                          @db.Decimal(10, 2)
+  moneda                     String                           @default("PEN")
+
+  pasarelaConfigId           String?
+  pasarelaTransaccionId      String?                          @unique
+  pasarelaOrdenId            String?
+  pasarelaMetodoDetalle      String?
+  verificadoPorWebhookFirma  Boolean                          @default(false)
+  fechaConfirmacionPasarela  DateTime?
+  respuestaCrudaPasarelaJson Json?
+
+  // Campos para pago manual (Yape/Plin/Transferencia) con número de operación irrepetible y hora exacta
+  cuentaDestinoManualId      String?
+  numeroOperacionBancaria    String?                          @unique
+  horaOperacionDeclarada     String?
+  fechaOperacionDeclarada    DateTime?
+  bancoOrigenDeclarado       String?
+  comprobanteAdjuntoUrl      String?
+  notasEstudiante            String?                          @db.Text
+
+  revisadoPorId              String?
+  rolRevisor                 RolUsuario?
+  fechaRevision              DateTime?
+  motivoDecision             String?                          @db.Text
+  observacionesRevision      String?                          @db.Text
+
+  createdAt                  DateTime                         @default(now())
+  updatedAt                  DateTime                         @updatedAt
+
+  pedido                     Pedido                           @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  pasarelaConfig             ConfiguracionPasarelaAutomatica? @relation(fields: [pasarelaConfigId], references: [id])
+  cuentaDestinoManual        CuentaDestinoPagoManual?         @relation(fields: [cuentaDestinoManualId], references: [id])
+  revisadoPor                User?                            @relation("RevisorPagoManual", fields: [revisadoPorId], references: [id])
+
+  eventosWebhook             EventoWebhookPasarela[]
+  historialAuditoria         AuditoriaOperacionPago[]
+
+  @@index([pedidoId])
+  @@index([estado, modalidad])
+  @@index([numeroOperacionBancaria])
+  @@index([createdAt])
+}
+
+model EventoWebhookPasarela {
+  id               String         @id @default(cuid())
+  proveedor        ProveedorPago
+  eventoExternoId  String         @unique
+  tipoEvento       String
+  firmaValida      Boolean        @default(false)
+  payloadJson      Json
+  operacionPagoId  String?
+  procesadoExitoso Boolean        @default(false)
+  mensajeError     String?
+  fechaRecepcion   DateTime       @default(now())
+
+  operacionPago    OperacionPago? @relation(fields: [operacionPagoId], references: [id])
+
+  @@index([proveedor, eventoExternoId])
+}
+
+model AuditoriaOperacionPago {
+  id                String               @id @default(cuid())
+  operacionPagoId   String
+  estadoAnterior    EstadoOperacionPago?
+  estadoNuevo       EstadoOperacionPago
+  accionEjecutada   String
+  usuarioActorId    String?
+  rolActor          RolUsuario?
+  ipOrigen          String?
+  userAgent         String?
+  motivoObservacion String?              @db.Text
+  fechaHoraExacta   DateTime             @default(now())
+
+  operacionPago     OperacionPago        @relation(fields: [operacionPagoId], references: [id], onDelete: Cascade)
+  usuarioActor      User?                @relation("ActorAuditoriaPago", fields: [usuarioActorId], references: [id])
+
+  @@index([operacionPagoId])
+  @@index([usuarioActorId])
+  @@index([fechaHoraExacta])
+}
+
+model CuotaEstudiante {
+  id               String              @id @default(cuid())
+  estudianteId     String
+  matriculaId      String
+  numeroCuota      Int
+  montoCuota       Decimal             @db.Decimal(10, 2)
+  fechaVencimiento DateTime
+  estado           EstadoOperacionPago @default(PENDIENTE_PAGO)
+  fechaPago        DateTime?
+
+  estudiante       User                @relation(fields: [estudianteId], references: [id], onDelete: Cascade)
+  matricula        MatriculaEstudiante @relation(fields: [matriculaId], references: [id], onDelete: Cascade)
+  itemsPedido      PedidoItem[]
+
+  @@unique([matriculaId, numeroCuota])
+  @@index([estudianteId, estado])
+  @@index([fechaVencimiento])
+}
+
+// ============================================================================
+// 8. BLOG, SOLICITUDES IN-HOUSE, AUDITORÍA GENERAL Y CMS LEGAL
+// ============================================================================
+
+model ArticuloBlogRecurso {
+  id              String   @id @default(cuid())
+  titulo          String
+  slug            String   @unique
+  resumen         String   @db.Text
+  contenidoHtml   String   @db.Text
+  categoria       String
+  imagenPortada   String?
+  archivoDescarga String?
+  autorId         String
+  publicado       Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  autor           User     @relation(fields: [autorId], references: [id])
+}
+
+model SolicitudAtencionUsuario {
+  id                    String   @id @default(cuid())
+  tipoSolicitud         String
+  usuarioId             String?
+  nombresApellidos      String
+  entidadInstitucion    String?
+  rucEntidad            String?
+  telefonoWhatsapp      String
+  correoElectronico     String
+  programaInteres       String?
+  cantidadParticipantes Int?
+  mensajeDetalle        String   @db.Text
+  estadoAtencion        String   @default("PENDIENTE")
+  createdAt             DateTime @default(now())
+
+  usuario               User?    @relation(fields: [usuarioId], references: [id])
+}
+
+model RegistroActividadSistema {
+  id          String   @id @default(cuid())
+  usuarioId   String?
+  modulo      String
+  accion      String
+  detalleJson Json?
+  ipOrigen    String?
+  createdAt   DateTime @default(now())
+
+  usuario     User?    @relation(fields: [usuarioId], references: [id])
+
+  @@index([modulo, createdAt])
+}
+
+model RegistroNotificacionCorreo {
+  id                 String                 @id @default(cuid())
+  usuarioId          String
+  correoDestino      String
+  tipoNotificacion   TipoNotificacionCorreo
+  asunto             String
+  referenciaPedidoId String?
+  enviadoExitoso     Boolean                @default(false)
+  errorProveedor     String?
+  fechaEnvio         DateTime               @default(now())
+
+  usuario            User                   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, tipoNotificacion])
+}
+
+model LoteMigracionExcel {
+  id                     String        @id @default(cuid())
+  nombreArchivoOriginal  String
+  ejecutadoPorId         String
+  totalFilasProcesadas   Int           @default(0)
+  usuariosCreados        Int           @default(0)
+  certificadosImportados Int           @default(0)
+  erroresDetalleJson     Json?
+  fechaEjecucion         DateTime      @default(now())
+
+  ejecutadoPor           User          @relation("EjecutorMigracionExcel", fields: [ejecutadoPorId], references: [id])
+  usuariosMigrados       User[]        @relation("UsuariosMigradosEnLote")
+  certificadosMigrados   Certificado[]
+}
+
+model ComentarioCurso {
+  id           String        @id @default(cuid())
+  cursoId      String
+  estudianteId String
+  calificacion Int           @default(5)
+  comentario   String        @db.Text
+  aprobado     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+
+  curso        CursoPrograma @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+  estudiante   User          @relation(fields: [estudianteId], references: [id], onDelete: Cascade)
+}
+
+model SeccionInstitucionalCMS {
+  id            String   @id @default(cuid())
+  claveSeccion  String   @unique
+  titulo        String
+  subtitulo     String?
+  contenidoHtml String   @db.Text
+  metadatosJson Json?
+  actualizadoEn DateTime @updatedAt
+}
+
+model LibroReclamacion {
+  id                   String    @id @default(cuid())
+  codigoHojaReclamo    String    @unique
+  usuarioId            String?
+  nombresApellidos     String
+  tipoDocumento        String    @default("DNI")
+  numeroDocumento      String
+  telefono             String
+  correoElectronico    String
+  domicilio            String
+  tipoBienContratado   String
+  montoReclamado       Decimal?  @db.Decimal(10, 2)
+  descripcionBien      String    @db.Text
+  tipoReclamacion      String
+  detalleReclamacion   String    @db.Text
+  pedidoConsumidor     String    @db.Text
+  estadoAtencion       String    @default("PENDIENTE")
+  respuestaInstitucion String?   @db.Text
+  fechaRespuesta       DateTime?
+  createdAt            DateTime  @default(now())
+
+  usuario              User?     @relation(fields: [usuarioId], references: [id])
+}
