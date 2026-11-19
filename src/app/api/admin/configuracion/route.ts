@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-
+import { activarServiciosPedido } from "@/lib/pagos/activarServiciosPedido";
 async function verificarAdminOSoporte() {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) return null;
@@ -1045,15 +1045,14 @@ export async function POST(request: Request) {
                 },
             });
 
-            await prisma.pedido.update({
-                where: { id: op.pedidoId },
-                data: {
-                    estado: nuevoEstado === "APROBADO" ? "PAGADO" : "RECHAZADO",
-                    serviciosActivados: nuevoEstado === "APROBADO",
-                    fechaActivacionServicios:
-                        nuevoEstado === "APROBADO" ? new Date() : null,
-                },
-            });
+            if (nuevoEstado === "APROBADO") {
+                await activarServiciosPedido(op.pedidoId);
+            } else {
+                await prisma.pedido.update({
+                    where: { id: op.pedidoId },
+                    data: { estado: "RECHAZADO" },
+                });
+            }
 
             return NextResponse.json({ ok: true });
         }
